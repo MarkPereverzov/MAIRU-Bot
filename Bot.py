@@ -1,5 +1,6 @@
 ﻿import discord
 import sqlite3
+import time
 from discord.ext import commands
 
 intents = discord.Intents.all()
@@ -52,10 +53,10 @@ async def balance_message(ctx, value, value1, value2):
 	await ctx.message.delete()
 	connection.commit()
 
-async def deposit_message(ctx, value, value1):
-	emb = discord.Embed(title = 'Депозит', color = 0xB9FFA8)
+async def deposit_message(ctx, value, value1, value2, value3):
+	emb = discord.Embed(title = value2, color = 0xB9FFA8)
 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
-	emb.add_field(name = 'Положил', value = f":coin: **{value}**")
+	emb.add_field(name = value3, value = f":coin: **{value}**")
 	emb.add_field(name = 'Комиссия 5%', value = f":coin: **{value1}**")
 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
 	await ctx.send(embed = emb)
@@ -81,7 +82,8 @@ async def deposit(ctx, amount: str = None):
 			commission = int(commission)
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(local_cash, ctx.author.id))
 			cursor.execute("UPDATE users SET bank = bank + {} WHERE id = {}".format(local_cash, ctx.author.id))
-			await deposit_message(ctx, local_cash, commission)
+			cursor.execute("UPDATE users SET bank = bank - {} WHERE id = {}".format(commission, ctx.author.id))
+			await deposit_message(ctx, local_cash - commission, commission, 'Депозит', 'Положил')
 		else:
 			print(amount)
 			amount = int(amount)
@@ -98,7 +100,38 @@ async def deposit(ctx, amount: str = None):
 					cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE users SET bank = bank + {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE users SET bank = bank - {} WHERE id = {}".format(commission, ctx.author.id))
-					await deposit_message(ctx, amount, commission)
+					await deposit_message(ctx, amount- commission, commission, 'Депозит', 'Положил')
+
+@client.command()
+async def withdraw(ctx, amount: str = None):
+	if amount is None:
+		await false_message(ctx, 'Сумма не была указана')
+	else:
+		if amount == "all":
+			local_bank = f"""{cursor.execute("SELECT bank FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+			local_bank = int(local_bank)
+			commission = local_bank / 100 * 5
+			commission = int(commission)
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_bank, ctx.author.id))
+			cursor.execute("UPDATE users SET bank = bank - {} WHERE id = {}".format(local_bank, ctx.author.id))
+			cursor.execute("UPDATE users SET bank = cash - {} WHERE id = {}".format(commission, ctx.author.id))
+			await deposit_message(ctx, local_bank - commission, commission, 'Обналичивание', 'Снял')
+		else:
+			amount = int(amount)
+			if amount <= 0:
+				await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+			else:
+				local_bank = f"""{cursor.execute("SELECT bank FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+				local_bank = int(local_bank)
+				commission = amount / 100 * 5
+				commission = int(commission)
+				if amount  > local_bank:
+					await false_message(ctx, 'На балансе недостаточно денег')
+				else:
+					cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+					cursor.execute("UPDATE users SET bank = bank - {} WHERE id = {}".format(amount, ctx.author.id))
+					cursor.execute("UPDATE users SET bank = cash - {} WHERE id = {}".format(commission, ctx.author.id))
+					await deposit_message(ctx, amount - commission, commission, 'Обналичивание', 'Снял')
 
 @client.command(aliases = ['give'])
 async def __give(ctx, member: discord.Member = None, amount: int = None):
@@ -106,7 +139,7 @@ async def __give(ctx, member: discord.Member = None, amount: int = None):
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
 		if amount is None:
-			await false_message(ctx, 'Сумма была указана неверно')
+			await false_message(ctx, 'Сумма не была указана')
 		elif amount < 1:
 			await false_message(ctx, 'Указанная сумма должна быть больше нуля')
 		else:
@@ -141,5 +174,55 @@ async def __set(ctx, member: discord.Member = None, amount: int = None):
 			cursor.execute("UPDATE users SET cash = {} WHERE id = {}".format(amount, member.id))
 			local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id)).fetchone()[0]}"""
 			await true_message(ctx, 'Установил баланс', member, local_cash)
+
+@client.command(aliases = ['pay'])
+async def __pay(ctx, member: discord.Member = None, amount: str = None):
+	if member is None:
+		await false_message(ctx, 'Пользователь не был указан')
+	else:
+		if amount is None:
+			await false_message(ctx, 'Сумма не была указана')
+		else:
+			if amount == "all":
+				local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+				local_cash = int(local_cash)
+				commission = local_cash / 100 * 5
+				commission = int(commission)
+				cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(local_cash, ctx.author.id))
+				cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_cash, member.id))
+				cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+				emb = discord.Embed(title = 'Заплатил', color = 0xB9FFA8)
+				emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+				emb.add_field(name = 'Кому', value =f"**{member.mention}**")
+				emb.add_field(name = 'Сколько', value = f"**{local_cash - commission}** :coin:")
+				emb.add_field(name = 'Комиссия 5%', value = f"**{commission}** :coin:")
+				emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+				await ctx.send(embed = emb)
+				await ctx.message.delete()
+				connection.commit()
+			else:
+				amount = int(amount)
+				if amount < 1:
+					await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+				else:
+					local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+					local_cash = int(local_cash)
+					if amount > local_cash:
+						await false_message(ctx, 'На балансе недостаточно денег')
+					else:
+						commission = amount / 100 * 5
+						commission = int(commission)
+						cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+						cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, member.id))
+						cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+						emb = discord.Embed(title = 'Заплатил', color = 0xB9FFA8)
+						emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+						emb.add_field(name = 'Кому', value =f"**{member.mention}**")
+						emb.add_field(name = 'Сколько', value = f"**{amount - commission}** :coin:")
+						emb.add_field(name = 'Комиссия 5%', value = f"**{commission}** :coin:")
+						emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+						await ctx.send(embed = emb)
+						await ctx.message.delete()
+						connection.commit()
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GxR3SB.PWy0P8Vp1nsoVnaVfbQrtI66Zx2hg-vVmSxjrA')
