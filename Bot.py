@@ -13,9 +13,28 @@ connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
 
 @client.event
+async def on_ready():
+	cursor.execute("""CREATE TABLE IF NOT EXISTS users (
+	name TEXT,
+	mention TEXT,
+	id INT,
+	cash BIGINT,
+	bank BIGINT,
+	xp INT,
+	lvl INT
+	)""")
+
+	for guild in client.guilds:
+		for member in guild.members:
+			if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
+				cursor.execute(f"INSERT INTO users VALUES ('{member}', '{member.mention}', {member.id}, 0, 0, 0, 0)")
+			else:
+				pass
+
+@client.event
 async def on_member_join(member):
 	if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-		cursor.execute(f"INSERT INTO users VALUES ('{member}', {member.id}, 0, 0, 0, 0)")
+		cursor.execute(f"INSERT INTO users VALUES ('{member}', {member.id}, 0, 0, 0)")
 		connection.commit()
 	else:
 		pass
@@ -85,7 +104,6 @@ async def deposit(ctx, amount: str = None):
 			cursor.execute("UPDATE users SET bank = bank - {} WHERE id = {}".format(commission, ctx.author.id))
 			await deposit_message(ctx, local_cash - commission, commission, 'Депозит', 'Положил')
 		else:
-			print(amount)
 			amount = int(amount)
 			if amount <= 0:
 				await false_message(ctx, 'Указанная сумма должна быть больше нуля')
@@ -224,5 +242,26 @@ async def __pay(ctx, member: discord.Member = None, amount: str = None):
 						await ctx.send(embed = emb)
 						await ctx.message.delete()
 						connection.commit()
+
+@client.command(aliases = ['leaderboard'])
+async def __leaderboard(ctx):
+	emb = discord.Embed(title = 'Список лидеров', color = 0xB9FFA8)
+	emb.set_author(name = ctx.guild.name, icon_url = ctx.guild.icon.url)
+	emb.add_field(name = 'Место', value ='', inline = True)
+	emb.add_field(name = 'Пользователи', value ='', inline = True)
+	emb.add_field(name = 'Баланс', value ='', inline = True)
+	emb.add_field(name = '', value ='', inline = False)
+	counter = 0
+	for row in cursor.execute("SELECT mention, cash, bank FROM users ORDER BY cash DESC LIMIT 15"):
+		counter += 1
+		emb.add_field(name = '', value = f'**#{counter}**', inline = True)
+		emb.add_field(name = '', value = f'{row[0]}', inline = True)
+		local_cash = row[1]
+		local_bank = row[2]
+		emb.add_field(name = '', value = f'**{local_cash + local_bank}** :coin:', inline = True)
+		emb.add_field(name = '', value ='', inline = False)
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GxR3SB.PWy0P8Vp1nsoVnaVfbQrtI66Zx2hg-vVmSxjrA')
