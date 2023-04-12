@@ -14,16 +14,7 @@ cursor = connection.cursor()
 
 @client.event
 async def on_ready():
-	cursor.execute("""CREATE TABLE IF NOT EXISTS users (
-	name TEXT,
-	mention TEXT,
-	id INT,
-	cash BIGINT,
-	bank BIGINT,
-	xp INT,
-	lvl INT
-	)""")
-
+	cursor.execute("""CREATE TABLE IF NOT EXISTS users (name TEXT, mention TEXT, id INT, cash BIGINT, bank BIGINT, xp INT, lvl INT)""")
 	for guild in client.guilds:
 		for member in guild.members:
 			if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
@@ -152,6 +143,7 @@ async def withdraw(ctx, amount: str = None):
 					await deposit_message(ctx, amount - commission, commission, 'Обналичивание', 'Снял')
 
 @client.command(aliases = ['give'])
+@commands.has_permissions( administrator = True)
 async def __give(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
@@ -166,6 +158,7 @@ async def __give(ctx, member: discord.Member = None, amount: int = None):
 			await true_message(ctx, 'Добавил к балансу', member, amount)
 
 @client.command(aliases = ['take'])
+@commands.has_permissions( administrator = True)
 async def __take(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
@@ -180,6 +173,7 @@ async def __take(ctx, member: discord.Member = None, amount: int = None):
 			await true_message(ctx, 'Cнял с баланса', member, amount)
 
 @client.command(aliases = ['set'])
+@commands.has_permissions( administrator = True)
 async def __set(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
@@ -252,7 +246,7 @@ async def __leaderboard(ctx):
 	emb.add_field(name = 'Баланс', value ='', inline = True)
 	emb.add_field(name = '', value ='', inline = False)
 	counter = 0
-	for row in cursor.execute("SELECT mention, cash, bank FROM users ORDER BY cash DESC LIMIT 15"):
+	for row in cursor.execute("SELECT mention, cash, bank FROM users ORDER BY cash DESC LIMIT 10"):
 		counter += 1
 		emb.add_field(name = '', value = f'**#{counter}**', inline = True)
 		emb.add_field(name = '', value = f'{row[0]}', inline = True)
@@ -263,5 +257,14 @@ async def __leaderboard(ctx):
 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
+
+@client.command(aliases = ['ozzey'])
+async def __ozzey(ctx):
+	x = 0
+	for x in range (0, 10):
+		await ctx.send("<@292996128138592256>")
+		x + 1
+
+
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GxR3SB.PWy0P8Vp1nsoVnaVfbQrtI66Zx2hg-vVmSxjrA')
