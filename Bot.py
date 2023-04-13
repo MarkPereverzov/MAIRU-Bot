@@ -1,4 +1,4 @@
-﻿import discord
+import discord
 import sqlite3
 import time
 from discord.ext import commands
@@ -264,6 +264,7 @@ async def __ozzey(ctx):
 	for x in range (0, 10):
 		await ctx.send("<@292996128138592256>")
 		x + 1
+	
 
 
 
