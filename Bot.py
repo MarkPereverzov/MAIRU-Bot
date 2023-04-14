@@ -1,31 +1,22 @@
+﻿import time
 import discord
 import sqlite3
-import time
+import random
 from discord.ext import commands
 
 intents = discord.Intents.all()
 intents.members = True
 intents.presences = True
 
-client = commands.Bot(command_prefix='!', intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
+client = commands.Bot(command_prefix='/', intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
 
 connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
 
 @client.event
-async def on_ready():
-	cursor.execute("""CREATE TABLE IF NOT EXISTS users (name TEXT, mention TEXT, id INT, cash BIGINT, bank BIGINT, xp INT, lvl INT)""")
-	for guild in client.guilds:
-		for member in guild.members:
-			if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-				cursor.execute(f"INSERT INTO users VALUES ('{member}', '{member.mention}', {member.id}, 0, 0, 0, 0)")
-			else:
-				pass
-
-@client.event
 async def on_member_join(member):
 	if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-		cursor.execute(f"INSERT INTO users VALUES ('{member}', {member.id}, 0, 0, 0)")
+		cursor.execute(f"INSERT INTO users VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0, 0, 0)")
 		connection.commit()
 	else:
 		pass
@@ -142,9 +133,9 @@ async def withdraw(ctx, amount: str = None):
 					cursor.execute("UPDATE users SET bank = cash - {} WHERE id = {}".format(commission, ctx.author.id))
 					await deposit_message(ctx, amount - commission, commission, 'Обналичивание', 'Снял')
 
-@client.command(aliases = ['give'])
+@client.command()
 @commands.has_permissions( administrator = True)
-async def __give(ctx, member: discord.Member = None, amount: int = None):
+async def give(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -157,9 +148,9 @@ async def __give(ctx, member: discord.Member = None, amount: int = None):
 			local_cash = cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id))
 			await true_message(ctx, 'Добавил к балансу', member, amount)
 
-@client.command(aliases = ['take'])
+@client.command()
 @commands.has_permissions( administrator = True)
-async def __take(ctx, member: discord.Member = None, amount: int = None):
+async def take(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -172,9 +163,9 @@ async def __take(ctx, member: discord.Member = None, amount: int = None):
 			local_cash = cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id))
 			await true_message(ctx, 'Cнял с баланса', member, amount)
 
-@client.command(aliases = ['set'])
+@client.command()
 @commands.has_permissions( administrator = True)
-async def __set(ctx, member: discord.Member = None, amount: int = None):
+async def set(ctx, member: discord.Member = None, amount: int = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -187,8 +178,8 @@ async def __set(ctx, member: discord.Member = None, amount: int = None):
 			local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id)).fetchone()[0]}"""
 			await true_message(ctx, 'Установил баланс', member, local_cash)
 
-@client.command(aliases = ['pay'])
-async def __pay(ctx, member: discord.Member = None, amount: str = None):
+@client.command()
+async def pay(ctx, member: discord.Member = None, amount: str = None):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -237,8 +228,8 @@ async def __pay(ctx, member: discord.Member = None, amount: str = None):
 						await ctx.message.delete()
 						connection.commit()
 
-@client.command(aliases = ['leaderboard'])
-async def __leaderboard(ctx):
+@client.command()
+async def leaderboard(ctx):
 	emb = discord.Embed(title = 'Список лидеров', color = 0xB9FFA8)
 	emb.set_author(name = ctx.guild.name, icon_url = ctx.guild.icon.url)
 	emb.add_field(name = 'Место', value ='', inline = True)
@@ -246,10 +237,10 @@ async def __leaderboard(ctx):
 	emb.add_field(name = 'Баланс', value ='', inline = True)
 	emb.add_field(name = '', value ='', inline = False)
 	counter = 0
-	for row in cursor.execute("SELECT mention, cash, bank FROM users ORDER BY cash DESC LIMIT 10"):
+	for row in cursor.execute("SELECT id, cash, bank FROM users ORDER BY cash DESC LIMIT 10"):
 		counter += 1
 		emb.add_field(name = '', value = f'**#{counter}**', inline = True)
-		emb.add_field(name = '', value = f'{row[0]}', inline = True)
+		emb.add_field(name = '', value = f"<@{row[0]}>", inline = True)
 		local_cash = row[1]
 		local_bank = row[2]
 		emb.add_field(name = '', value = f'**{local_cash + local_bank}** :coin:', inline = True)
@@ -258,14 +249,57 @@ async def __leaderboard(ctx):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 
-@client.command(aliases = ['ozzey'])
-async def __ozzey(ctx):
-	x = 0
-	for x in range (0, 10):
-		await ctx.send("<@292996128138592256>")
-		x + 1
-	
+async def coin_message(ctx, value, value1):
+	emb = discord.Embed(title = f'{value}', color = 0xFF7575)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = 'Сколько', value = f'**{value1}** :coin:')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
 
+@client.command()
+async def coin(ctx, side: str = None, amount: int = None):
+	choice = ['орёл', 'решка']
+	random.shuffle(choice)
+	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+	local_cash = int(local_cash)
+	if amount >= local_cash:
+		await false_message(ctx, 'На балансе недостаточно денег')
+	elif amount <= 0:
+		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+	else:
+		print(choice[0], side)
+		if choice[0] == side:
+			await coin_message(ctx, 'Выиграл', amount)
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+		else:
+			await coin_message(ctx, 'Проиграл', amount)
+			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+
+async def time_message(ctx, value, value1):
+	emb = discord.Embed(title = value, color = 0xFF7575)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = 'Заработал', value = f'**{value1}** :coin:')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+
+@client.command()
+async def work(ctx):
+	cursor.execute("SELECT * FROM jobs ORDER BY amount")
+	local_name = cursor.execute("SELECT salary FROM jobs ORDER BY salary LIMIT 1")
+	await ctx.send(local_name)
+	local_work = f"""{cursor.execute("SELECT work FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+	local_work = float(local_work)
+	if local_work == 0:
+		realtime = time.time()
+		cursor.execute("UPDATE users SET work = {} WHERE id = {}".format(realtime, ctx.author.id))
+	else:
+		realtime = time.time()
+		if realtime - local_work > 1:
+			pass
+		else:
+			await false_message(ctx, 'Прошло недостаточно времени с прошлой работы')
 
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GxR3SB.PWy0P8Vp1nsoVnaVfbQrtI66Zx2hg-vVmSxjrA')
