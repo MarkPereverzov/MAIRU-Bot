@@ -8,7 +8,7 @@ intents = discord.Intents.all()
 intents.members = True
 intents.presences = True
 
-client = commands.Bot(command_prefix='/', intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
+client = commands.Bot(command_prefix='!', intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
 
 connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
@@ -63,6 +63,8 @@ async def deposit_message(ctx, value, value1, value2, value3):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 	connection.commit()
+
+
 
 @client.command()
 async def balance(ctx, member: discord.Member = None):
@@ -276,30 +278,60 @@ async def coin(ctx, side: str = None, amount: int = None):
 			await coin_message(ctx, 'Проиграл', amount)
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 
-async def time_message(ctx, value, value1):
-	emb = discord.Embed(title = value, color = 0xFF7575)
+#-------------------------------------------
+#      | Работа с библиотекой TIME | 
+#-------------------------------------------
+
+async def true_bonus_message(ctx, value, day, hour, min, value2):
+	emb = discord.Embed(title = value, color = 0xB9FFA8)
 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
-	emb.add_field(name = 'Заработал', value = f'**{value1}** :coin:')
+	emb.add_field(name = 'Следующая', value = f'**{day}дн {hour}ч {min}м.**')
+	emb.add_field(name = 'Заработал', value = f'**{value2}** :coin:')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+	connection.commit()
+
+async def false_bonus_message(ctx, day, hour, min):
+	emb = discord.Embed(title = '', color = 0xFF7575)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = f'Этот бонус ещё недоступен, возвращайся через **{day}дн {hour}ч {min}м**.', value = '')
 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 
-@client.command()
-async def work(ctx):
-	cursor.execute("SELECT * FROM jobs ORDER BY amount")
-	local_name = cursor.execute("SELECT salary FROM jobs ORDER BY salary LIMIT 1")
-	await ctx.send(local_name)
-	local_work = f"""{cursor.execute("SELECT work FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
-	local_work = float(local_work)
-	if local_work == 0:
-		realtime = time.time()
-		cursor.execute("UPDATE users SET work = {} WHERE id = {}".format(realtime, ctx.author.id))
+async def time_algorithm(ctx, amount, excerpt, name, abama):
+	local_timely = f"""{cursor.execute("SELECT {} FROM users WHERE id = {}".format(abama, ctx.author.id)).fetchone()[0]}"""
+	local_timely = float(local_timely)
+	realtime = time.time()
+	if local_timely == 0:
+		localgm_time = time.gmtime(abs(excerpt))
+		cursor.execute("UPDATE users SET {} = {} WHERE id = {}".format(abama, realtime, ctx.author.id))
+		cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+		await true_bonus_message(ctx, name, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min, amount)
 	else:
-		realtime = time.time()
-		if realtime - local_work > 1:
-			pass
+		localgm_time = time.gmtime(abs(excerpt - (realtime - local_timely)))
+		if realtime - local_timely > excerpt:
+			cursor.execute("UPDATE users SET {} = {} WHERE id = {}".format(abama, realtime, ctx.author.id))
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+			await true_bonus_message(ctx, name, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min, amount)
 		else:
-			await false_message(ctx, 'Прошло недостаточно времени с прошлой работы')
+			await false_bonus_message(ctx, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min)
 
+@client.command()
+async def timely(ctx):
+	await time_algorithm(ctx, 200, 21600, 'Почасовой бонус', 'timely')
 
-client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GxR3SB.PWy0P8Vp1nsoVnaVfbQrtI66Zx2hg-vVmSxjrA')
+@client.command()
+async def daily(ctx):
+	await time_algorithm(ctx, 500, 86400, 'Ежедневный бонус', 'daily')
+
+@client.command()
+async def weekly(ctx):
+	await time_algorithm(ctx, 2500, 604800, 'Еженедельный бонус', 'weekly')
+
+@client.command()
+async def monthly(ctx):
+	await time_algorithm(ctx, 7500, 2592000, 'Ежемесячный бонус', 'monthly')
+
+client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
