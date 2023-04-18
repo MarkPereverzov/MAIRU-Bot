@@ -1,3 +1,3 @@
-# DiscordBot
+###Mairu Bot
 
-MAIRU Bot - advanced discord bot specially created for the MAIRU server. With it, you can configure the economic system, the aspect of moderation and auto-moderation.
+**Простой бот на языке `python` предназначенный для создания простой экономической системы в мессенджере `Discord`. Для корректного использования необходимо установить библиотеки `sqlite3` и `discord.py`. Перед внесением изминений в базу данных изучите таблицы `jobs` - данные о работах сервера, `users` - данные о пользователях.**

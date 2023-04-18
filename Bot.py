@@ -14,6 +14,41 @@ connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
 
 @client.event
+async def on_ready():
+	cursor.execute("""CREATE TABLE IF NOT EXISTS users (id INT, cash BIGINT, bank BIGINT, xp INT, lvl INT, work BIGFLOAT,timely BIGFLOAT,daily BIGFLOAT,weekly BIGFLOAT,monthly BIGFLOAT)""")
+	cursor.execute("""CREATE TABLE IF NOT EXISTS jobs (id INT, name TEXT, salary INT)""")
+	valuesa = "INSERT INTO jobs (id, name, salary) VALUES"
+	cursor.execute(f"""{valuesa} (0, "Программист", 1000)""")
+	cursor.execute(f"""{valuesa} (1, 'Cтроитель', 350)""")
+	cursor.execute(f"""{valuesa} (2, 'Механик', 200)""")
+	cursor.execute(f"""{valuesa} (3, 'Бухгалтер', 500)""")
+	cursor.execute(f"""{valuesa} (4, 'Юрист', 1200)""")
+	cursor.execute(f"""{valuesa} (5, 'Врач', 800)""")
+	cursor.execute(f"""{valuesa} (6, 'Экономист', 400)""")
+	cursor.execute(f"""{valuesa} (7, 'Архитектор', 700)""")
+	cursor.execute(f"""{valuesa} (8, 'Дизайнер', 850)""")
+	cursor.execute(f"""{valuesa} (9, 'Учитель', 100)""")
+	cursor.execute(f"""{valuesa} (10, 'Фармацевт', 550)""")
+	cursor.execute(f"""{valuesa} (11, 'Сантехник', 100)""")
+	cursor.execute(f"""{valuesa} (12, 'Нефтяник', 750)""")
+	cursor.execute(f"""{valuesa} (13, 'Геолог', 400)""")
+	cursor.execute(f"""{valuesa} (14, 'Геодезист', 650)""")
+	cursor.execute(f"""{valuesa} (15, 'Психолог', 550)""")
+	cursor.execute(f"""{valuesa} (16, 'Электрик', 150)""")
+	cursor.execute(f"""{valuesa} (17, 'Аналитик', 800)""")
+	cursor.execute(f"""{valuesa} (18, 'Космогеолог', 900)""")
+	cursor.execute(f"""{valuesa} (19, 'Говночист', 50)""")
+	connection.commit()
+
+	for guild in client.guilds:
+		for member in guild.members:
+			if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
+				cursor.execute(f"INSERT INTO users VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0, 0, 0)")
+			else:
+				pass
+
+
+@client.event
 async def on_member_join(member):
 	if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
 		cursor.execute(f"INSERT INTO users VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0, 0, 0)")
@@ -295,7 +330,7 @@ async def true_bonus_message(ctx, value, day, hour, min, value2):
 async def false_bonus_message(ctx, day, hour, min):
 	emb = discord.Embed(title = '', color = 0xFF7575)
 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
-	emb.add_field(name = f'Этот бонус ещё недоступен, возвращайся через **{day}дн {hour}ч {min}м**.', value = '')
+	emb.add_field(name = f'Этот бонус ещё недоступен, возвращайся **через {day}дн {hour}ч {min}м**.', value = '')
 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
@@ -320,18 +355,58 @@ async def time_algorithm(ctx, amount, excerpt, name, abama):
 
 @client.command()
 async def timely(ctx):
-	await time_algorithm(ctx, 200, 21600, 'Почасовой бонус', 'timely')
+	await time_algorithm(ctx, 500, 21600, 'Почасовой бонус', 'timely')
 
 @client.command()
 async def daily(ctx):
-	await time_algorithm(ctx, 500, 86400, 'Ежедневный бонус', 'daily')
+	await time_algorithm(ctx, 1250, 86400, 'Ежедневный бонус', 'daily')
 
 @client.command()
 async def weekly(ctx):
-	await time_algorithm(ctx, 2500, 604800, 'Еженедельный бонус', 'weekly')
+	await time_algorithm(ctx, 4750, 604800, 'Еженедельный бонус', 'weekly')
 
 @client.command()
 async def monthly(ctx):
-	await time_algorithm(ctx, 7500, 2592000, 'Ежемесячный бонус', 'monthly')
+	await time_algorithm(ctx, 11000, 2592000, 'Ежемесячный бонус', 'monthly')
+
+@client.command()
+async def work(ctx):
+	rand = random.randrange(0, 19)
+	local_work = f"""{cursor.execute("SELECT work FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+	local_jobs = f"""{cursor.execute("SELECT name FROM jobs WHERE id = {}".format(rand)).fetchone()[0]}"""
+	local_salary = f"""{cursor.execute("SELECT salary FROM jobs WHERE id = {}".format(rand)).fetchone()[0]}"""
+	local_work = float(local_work)
+	local_salary = int(local_salary)
+	realtime = time.time()
+	if local_work == 0:
+		localgm_time = time.gmtime(abs(14400))
+		cursor.execute("UPDATE users SET work = {} WHERE id = {}".format(realtime, ctx.author.id))
+		cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_salary, ctx.author.id))
+		emb = discord.Embed(title = 'Работа', color = 0xB9FFA8)
+		emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+		emb.add_field(name = 'Следующая', value = f'**через {localgm_time.tm_mday - 1}дн {localgm_time.tm_hour}ч {localgm_time.tm_min}м.**')
+		emb.add_field(name = 'Профессия', value = f'**{local_jobs}**')
+		emb.add_field(name = 'Заработал', value = f'**{local_salary}** :coin:')
+		emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+		await ctx.send(embed = emb)
+		await ctx.message.delete()
+		connection.commit()
+	else:
+		localgm_time = time.gmtime(abs(14400 - (realtime - local_work)))
+		if realtime - local_work > 14400:
+			cursor.execute("UPDATE users SET work = {} WHERE id = {}".format(realtime, ctx.author.id))
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_salary, ctx.author.id))
+			emb = discord.Embed(title = 'Работа', color = 0xB9FFA8)
+			emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+			emb.add_field(name = 'Следующая', value = f'**через {localgm_time.tm_mday - 1}дн {localgm_time.tm_hour}ч {localgm_time.tm_min}м.**')
+			emb.add_field(name = 'Профессия', value = f'**{local_jobs}**')
+			emb.add_field(name = 'Заработал', value = f'**{local_salary}** :coin:')
+			emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+			await ctx.send(embed = emb)
+			await ctx.message.delete()
+			connection.commit()
+		else:
+			await false_bonus_message(ctx, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min)
+
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
