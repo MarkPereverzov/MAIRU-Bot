@@ -16,7 +16,7 @@ cursor = connection.cursor()
 @client.event
 async def on_member_join(member):
 	if cursor.execute(f"SELECT id FROM users WHERE id = {member.id}").fetchone() is None:
-		cursor.execute(f"INSERT INTO users VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0)")
+		cursor.execute(f"INSERT INTO users VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0, 0)")
 		connection.commit()
 	else:
 		pass
@@ -63,8 +63,6 @@ async def deposit_message(ctx, value, value1, value2, value3):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 	connection.commit()
-
-
 
 @client.command()
 async def balance(ctx, member: discord.Member = None):
@@ -239,7 +237,7 @@ async def leaderboard(ctx):
 	emb.add_field(name = 'Баланс', value ='', inline = True)
 	emb.add_field(name = '', value ='', inline = False)
 	counter = 0
-	for row in cursor.execute("SELECT id, cash, bank FROM users ORDER BY cash DESC LIMIT 10"):
+	for row in cursor.execute("SELECT id, cash, bank FROM users ORDER BY cash DESC LIMIT 5"):
 		counter += 1
 		emb.add_field(name = '', value = f'**#{counter}**', inline = True)
 		emb.add_field(name = '', value = f"<@{row[0]}>", inline = True)
@@ -385,7 +383,7 @@ async def wardengardenspraheng(ctx, number, gardenwarden, color2):
 
 @client.command()
 async def event(ctx):
-	number = random.randrange(-750, 150)
+	number = random.randrange(-75, 150)
 	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
 	local_cash = float(local_cash)
 	if number >= 0:
@@ -400,5 +398,62 @@ async def event(ctx):
 		else:
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(number, ctx.author.id))
 		await wardengardenspraheng(ctx, number, gardenwarden, 0xFF7575)
+	
+@client.command()
+async def rob(ctx, member: discord.Member = None):
+	realtime = time.time()
+	rand = random.randint(0, 1)
+	if member is None:
+		await false_message(ctx, 'Пользователь не был указан')
+	else:
+		local_rob = f"""{cursor.execute("SELECT rob FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+		local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id)).fetchone()[0]}"""
+		local_rob = float(local_rob)
+		local_cash = int(local_cash)
+		commission = random.randint(local_cash * 0.5, local_cash)
+		if local_rob == 0:
+			gardenwarden = random.randint(0, 10)
+			cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
+			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+			
+			connection.commit()
+		else:
+			if realtime - local_rob > 1:
+				gardenwarden = random.randint(0, 10)
+				cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
+				cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+			else:
+				pass
+
+
+# async def slots_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
+# 	emb = discord.Embed(title = 'Слоты', color = tcolor)
+# 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+# 	emb.add_field(name = 'Результат', value = f'{ffieldtext}')
+# 	emb.add_field(name = fdfieldtext, value = f'**{sfieldtext} **:coin:')
+# 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+# 	await ctx.send(embed = emb)
+# 	await ctx.message.delete()
+# 	connection.commit()
+
+# @client.command()
+# async def slots(ctx, amount: int = 0):
+# 	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+# 	local_cash = int(local_cash)
+# 	if amount >= local_cash:
+# 		await false_message(ctx, 'На балансе недостаточно денег')
+# 	elif amount <= 0:
+# 		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+# 	else:
+# 		choice = [':dollar:', ':euro:', ':pound:'] * 3
+# 		random.shuffle(choice)
+# 		if choice[1] == choice[2] or choice[2] == choice[3]:
+# 			local_amount = int(amount * 1.5)
+# 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
+# 		elif choice[1] == choice[2] and choice[2] == choice[3]:
+# 			local_amount = int(amount * 20)
+# 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
+# 		else:
+# 			pass
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
