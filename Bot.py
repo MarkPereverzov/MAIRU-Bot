@@ -179,7 +179,7 @@ async def set(ctx, member: discord.Member = None, amount: int = None):
 			await true_message(ctx, 'Установил баланс', member, local_cash)
 
 @client.command()
-async def pay(ctx, member: discord.Member = None, amount: str = None):
+async def pay(ctx, member: discord.Member = None, amount: str = 0):
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -249,8 +249,8 @@ async def leaderboard(ctx):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 
-async def coin_message(ctx, value, value1):
-	emb = discord.Embed(title = 'Монетка', color = 0xB9FFA8)
+async def coin_message(ctx, value, value1, color2):
+	emb = discord.Embed(title = 'Монетка', color = color2)
 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
 	emb.add_field(name = 'Результат', value = f'**{value}**')
 	emb.add_field(name = 'Сколько', value = f'**{value1}** :coin:')
@@ -259,7 +259,7 @@ async def coin_message(ctx, value, value1):
 	await ctx.message.delete()
 
 @client.command()
-async def coin(ctx, side: str = None, amount: int = None):
+async def coin(ctx, side: str = None, amount: int = 0):
 	choice = ['орёл', 'решка']
 	random.shuffle(choice)
 	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
@@ -270,10 +270,10 @@ async def coin(ctx, side: str = None, amount: int = None):
 		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
 	else:
 		if choice[0] == side:
-			await coin_message(ctx, 'Выиграл', amount)
+			await coin_message(ctx, 'Выиграл', amount * 2, 0xB9FFA8)
 			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
 		else:
-			await coin_message(ctx, 'Проиграл', amount)
+			await coin_message(ctx, 'Проиграл', amount, 0xFF7575)
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 
 #-------------------------------------------
@@ -399,10 +399,18 @@ async def event(ctx):
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(number, ctx.author.id))
 		await wardengardenspraheng(ctx, number, gardenwarden, 0xFF7575)
 	
+async def darbumverde(ctx, color2, gardenwarden, commission, coin):
+	emb = discord.Embed(title = 'Ограбление', color = color2)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = f'{gardenwarden} {commission} {coin}', value = ' ')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+	connection.commit()
+	
 @client.command()
 async def rob(ctx, member: discord.Member = None):
 	realtime = time.time()
-	rand = random.randint(0, 1)
 	if member is None:
 		await false_message(ctx, 'Пользователь не был указан')
 	else:
@@ -410,20 +418,29 @@ async def rob(ctx, member: discord.Member = None):
 		local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(member.id)).fetchone()[0]}"""
 		local_rob = float(local_rob)
 		local_cash = int(local_cash)
-		commission = random.randint(local_cash * 0.5, local_cash)
+		commission = random.randint(int(local_cash * 0.5), local_cash)
+		localgm_time = time.gmtime(abs(43200 - (realtime - local_rob)))
 		if local_rob == 0:
 			gardenwarden = random.randint(0, 10)
 			cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
-			
-			connection.commit()
+			await darbumverde(ctx, 0xB9FFA8, gardenwarden, commission)
 		else:
-			if realtime - local_rob > 1:
-				gardenwarden = random.randint(0, 10)
-				cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
-				cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+			if realtime - local_rob > 43200:
+				randoma = random.randint(0, 100)
+				if randoma > 60:
+					gardenwarden = random.randint(0, 10)
+					cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
+					local_trash = f"""{cursor.execute("SELECT sanderfander FROM jobs WHERE id = {}".format(gardenwarden)).fetchone()[0]}"""
+					await darbumverde(ctx, 0xB9FFA8, local_trash, commission, ':coin:')
+				else:
+					gardenwarden = random.randint(11, 20)
+					cursor.execute("UPDATE users SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
+					cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+					local_trash = f"""{cursor.execute("SELECT sanderfander FROM jobs WHERE id = {}".format(gardenwarden)).fetchone()[0]}"""
+					await darbumverde(ctx, 0xFF7575, local_trash, '', '')
 			else:
-				pass
+				await false_bonus_message(ctx, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min)
 
 
 # async def slots_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
