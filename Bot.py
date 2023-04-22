@@ -475,4 +475,33 @@ async def slots(ctx, amount: int = 0):
 			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 			await slots_message(ctx, 0xFF7575, choice[0] + " " + choice[1] + " " + choice[2], amount, 'Проигрышы')
 
+async def revolver_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
+	emb = discord.Embed(title = 'Револьвер', color = tcolor)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = 'Результат', value = f'{ffieldtext}')
+	emb.add_field(name = fdfieldtext, value = f'**{sfieldtext} **:coin:')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+	connection.commit()
+
+@client.command()
+async def revolver(ctx, amount: int = 0):
+	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+	local_cash = int(local_cash)
+	choice = [':cd:', ':dvd:', ':dvd:', ':dvd:', ':dvd:']
+	random.shuffle(choice)
+	if amount >= local_cash:
+		await false_message(ctx, 'На балансе недостаточно денег')
+	elif amount <= 0:
+		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+	else:
+		if choice[0] == ':cd:':
+			local_amount = int(amount * 5)
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			await revolver_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2] + " " + choice[3] + " " + choice[4], local_amount, 'Выигрыш')
+		else:
+			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+			await revolver_message(ctx, 0xFF7575, choice[0] + " " + choice[1] + " " + choice[2] + " " + choice[3] + " " + choice[4], amount, 'Проигрышы')
+
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
