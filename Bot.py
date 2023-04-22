@@ -442,35 +442,37 @@ async def rob(ctx, member: discord.Member = None):
 			else:
 				await false_bonus_message(ctx, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min)
 
+async def slots_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
+	emb = discord.Embed(title = 'Слоты', color = tcolor)
+	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
+	emb.add_field(name = 'Результат', value = f'{ffieldtext}')
+	emb.add_field(name = fdfieldtext, value = f'**{sfieldtext} **:coin:')
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+	connection.commit()
 
-# async def slots_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
-# 	emb = discord.Embed(title = 'Слоты', color = tcolor)
-# 	emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
-# 	emb.add_field(name = 'Результат', value = f'{ffieldtext}')
-# 	emb.add_field(name = fdfieldtext, value = f'**{sfieldtext} **:coin:')
-# 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
-# 	await ctx.send(embed = emb)
-# 	await ctx.message.delete()
-# 	connection.commit()
-
-# @client.command()
-# async def slots(ctx, amount: int = 0):
-# 	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
-# 	local_cash = int(local_cash)
-# 	if amount >= local_cash:
-# 		await false_message(ctx, 'На балансе недостаточно денег')
-# 	elif amount <= 0:
-# 		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
-# 	else:
-# 		choice = [':dollar:', ':euro:', ':pound:'] * 3
-# 		random.shuffle(choice)
-# 		if choice[1] == choice[2] or choice[2] == choice[3]:
-# 			local_amount = int(amount * 1.5)
-# 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
-# 		elif choice[1] == choice[2] and choice[2] == choice[3]:
-# 			local_amount = int(amount * 20)
-# 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
-# 		else:
-# 			pass
+@client.command()
+async def slots(ctx, amount: int = 0):
+	local_cash = f"""{cursor.execute("SELECT cash FROM users WHERE id = {}".format(ctx.author.id)).fetchone()[0]}"""
+	local_cash = int(local_cash)
+	if amount >= local_cash:
+		await false_message(ctx, 'На балансе недостаточно денег')
+	elif amount <= 0:
+		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
+	else:
+		choice = [':dollar:', ':euro:', ':pound:'] * 3
+		random.shuffle(choice)
+		if choice[0] == choice[1] == choice[2]:
+			local_amount = int(amount * 20)
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
+		elif choice[0] == choice[1] or choice[1] == choice[2]:
+			local_amount = int(amount * 1.5)
+			cursor.execute("UPDATE users SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
+		else:
+			cursor.execute("UPDATE users SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+			await slots_message(ctx, 0xFF7575, choice[0] + " " + choice[1] + " " + choice[2], amount, 'Проигрышы')
 
 client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
