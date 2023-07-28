@@ -85,6 +85,7 @@ async def deposit(ctx, amount: str = None):
 			cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(local_cash, ctx.author.id))
 			cursor.execute("UPDATE member SET bank = bank + {} WHERE id = {}".format(local_cash, ctx.author.id))
 			cursor.execute("UPDATE member SET bank = bank - {} WHERE id = {}".format(commission, ctx.author.id))
+			cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 			await deposit_message(ctx, local_cash - commission, commission, 'Депозит', 'Положил')
 		else:
 			amount = int(amount)
@@ -101,6 +102,7 @@ async def deposit(ctx, amount: str = None):
 					cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE member SET bank = bank + {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE member SET bank = bank - {} WHERE id = {}".format(commission, ctx.author.id))
+					cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 					await deposit_message(ctx, amount- commission, commission, 'Депозит', 'Положил')
 
 @client.command()
@@ -116,6 +118,7 @@ async def withdraw(ctx, amount: str = None):
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_bank, ctx.author.id))
 			cursor.execute("UPDATE member SET bank = bank - {} WHERE id = {}".format(local_bank, ctx.author.id))
 			cursor.execute("UPDATE member SET bank = cash - {} WHERE id = {}".format(commission, ctx.author.id))
+			cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 			await deposit_message(ctx, local_bank - commission, commission, 'Обналичивание', 'Снял')
 		else:
 			amount = int(amount)
@@ -132,6 +135,7 @@ async def withdraw(ctx, amount: str = None):
 					cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE member SET bank = bank - {} WHERE id = {}".format(amount, ctx.author.id))
 					cursor.execute("UPDATE member SET bank = cash - {} WHERE id = {}".format(commission, ctx.author.id))
+					cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 					await deposit_message(ctx, amount - commission, commission, 'Обналичивание', 'Снял')
 
 @client.command()
@@ -195,6 +199,7 @@ async def pay(ctx, member: discord.Member = None, amount: str = 0):
 				cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(local_cash, ctx.author.id))
 				cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_cash, member.id))
 				cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+				cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 				emb = discord.Embed(title = 'Заплатил', color = 0xB9FFA8)
 				emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
 				emb.add_field(name = 'Кому', value =f"**{member.mention}**")
@@ -219,6 +224,7 @@ async def pay(ctx, member: discord.Member = None, amount: str = 0):
 						cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
 						cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(amount, member.id))
 						cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+						cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 						emb = discord.Embed(title = 'Заплатил', color = 0xB9FFA8)
 						emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
 						emb.add_field(name = 'Кому', value =f"**{member.mention}**")
@@ -258,6 +264,7 @@ async def coin_message(ctx, value, value1, color2):
 	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
+	connection.commit()
 
 @client.command()
 async def coin(ctx, side: str = None, amount: int = 0):
@@ -271,11 +278,15 @@ async def coin(ctx, side: str = None, amount: int = 0):
 		await false_message(ctx, 'Указанная сумма должна быть больше нуля')
 	else:
 		if choice[0] == side:
-			await coin_message(ctx, 'Выиграл', amount * 2, 0xB9FFA8)
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gameprofit = gameprofit + {} WHERE id = {}".format(amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
+			await coin_message(ctx, 'Выиграл', amount * 2, 0xB9FFA8)
 		else:
-			await coin_message(ctx, 'Проиграл', amount, 0xFF7575)
 			cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gamelossprofit = gamelossprofit + {} WHERE id = {}".format(amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
+			await coin_message(ctx, 'Проиграл', amount, 0xFF7575)
 
 #-------------------------------------------
 #      | Работа с библиотекой TIME | 
@@ -307,12 +318,14 @@ async def time_algorithm(ctx, amount, excerpt, name, abama):
 		localgm_time = time.gmtime(abs(excerpt))
 		cursor.execute("UPDATE member SET {} = {} WHERE id = {}".format(abama, realtime, ctx.author.id))
 		cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+		cursor.execute("UPDATE server SET bonusamount = bonusamount + {} WHERE id = {}".format(amount, 0))
 		await true_bonus_message(ctx, name, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min, amount)
 	else:
 		localgm_time = time.gmtime(abs(excerpt - (realtime - local_timely)))
 		if realtime - local_timely > excerpt:
 			cursor.execute("UPDATE member SET {} = {} WHERE id = {}".format(abama, realtime, ctx.author.id))
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(amount, ctx.author.id))
+			cursor.execute("UPDATE server SET bonusamount = bonusamount + {} WHERE id = {}".format(amount, 0))
 			await true_bonus_message(ctx, name, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min, amount)
 		else:
 			await false_bonus_message(ctx, localgm_time.tm_mday - 1, localgm_time.tm_hour, localgm_time.tm_min)
@@ -345,6 +358,7 @@ async def work(ctx):
 	if local_work == 0:
 		localgm_time = time.gmtime(abs(14400))
 		cursor.execute("UPDATE member SET work = {} WHERE id = {}".format(realtime, ctx.author.id))
+		cursor.execute("UPDATE server SET workamount = workamount + {} WHERE id = {}".format(local_salary, 0))
 		cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_salary, ctx.author.id))
 		emb = discord.Embed(title = 'Работа', color = 0xB9FFA8)
 		emb.set_author(name = ctx.author.name, icon_url = ctx.author.avatar)
@@ -390,6 +404,7 @@ async def event(ctx):
 	if number >= 0:
 		gardenwarden = random.randrange(0, 10)
 		cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(number, ctx.author.id))
+		cursor.execute("UPDATE server SET bonusamount = bonusamount + {} WHERE id = {}".format(number, 0))
 		await wardengardenspraheng(ctx, number, gardenwarden, 0xB9FFA8)
 	else:
 		number = abs(number)
@@ -425,8 +440,9 @@ async def rob(ctx, member: discord.Member = None):
 			gardenwarden = random.randint(0, 10)
 			local_trash = f"""{cursor.execute("SELECT robtext FROM ability WHERE id = {}".format(gardenwarden)).fetchone()[0]}"""
 			cursor.execute("UPDATE member SET rob = {} WHERE id = {}".format(realtime, ctx.author.id))
-			cursor.execute("UPDATE server SET robamount = robamount + {} WHERE id = {}".format(1, 0))
+			cursor.execute("UPDATE server SET robamount = robamount + {} WHERE id = {}".format(commission, 0))
 			cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(commission, member.id))
+			cursor.execute("UPDATE server SET commission = commission + {} WHERE id = {}".format(commission, 0))
 			await darbumverde(ctx, 0xB9FFA8, local_trash, commission, ':coin:')
 		else:
 			if realtime - local_rob > 43200:
@@ -469,13 +485,18 @@ async def slots(ctx, amount: int = 0):
 		if choice[0] == choice[1] == choice[2]:
 			local_amount = int(amount * 20)
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gameprofit = gameprofit + {} WHERE id = {}".format(local_amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
 		elif choice[0] == choice[1] or choice[1] == choice[2]:
 			local_amount = int(amount * 1.5)
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gameprofit = gameprofit + {} WHERE id = {}".format(local_amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
 			await slots_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2], local_amount, 'Выигрыш')
 		else:
 			cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gamelossprofit = gamelossprofit + {} WHERE id = {}".format(amount, 0))
 			await slots_message(ctx, 0xFF7575, choice[0] + " " + choice[1] + " " + choice[2], amount, 'Проигрышы')
 
 async def revolver_message(ctx, tcolor, ffieldtext, sfieldtext, fdfieldtext):
@@ -502,9 +523,23 @@ async def revolver(ctx, amount: int = 0):
 		if choice[0] == ':cd:':
 			local_amount = int(amount * 5)
 			cursor.execute("UPDATE member SET cash = cash + {} WHERE id = {}".format(local_amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gameprofit = gameprofit + {} WHERE id = {}".format(local_amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
 			await revolver_message(ctx, 0xB9FFA8, choice[0] + " " + choice[1] + " " + choice[2] + " " + choice[3] + " " + choice[4], local_amount, 'Выигрыш')
 		else:
 			cursor.execute("UPDATE member SET cash = cash - {} WHERE id = {}".format(amount, ctx.author.id))
+			cursor.execute("UPDATE server SET gamelossprofit = gamelossprofit + {} WHERE id = {}".format(amount, 0))
+			cursor.execute("UPDATE server SET gameamount = gameamount + {} WHERE id = {}".format(1, 0))
 			await revolver_message(ctx, 0xFF7575, choice[0] + " " + choice[1] + " " + choice[2] + " " + choice[3] + " " + choice[4], amount, 'Проигрышы')
 
-client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.G0VXD_.WzpTAPKsSvVWwsqyN7BVqstL3-4GdgyInkcq_k')
+@client.command()
+async def help(ctx):
+	emb = discord.Embed(title = 'Команды', color = 0xB9FFA8)
+	emb.set_author(name = ctx.guild.name, icon_url = ctx.guild.icon.url)
+	emb.add_field(name = 'Экономические', value = '`balance` `deposit` `withdraw` `pay` `give` `take` `set` `leaderboard` `coin` `revolver` `work` `timely` `daily` `weekly` `monthly` `slots` `rob` `event`', inline = False)
+	emb.add_field(name = 'Административные', value = '`ban` `kick` `mute`', inline = False)
+	emb.set_image(url = "https://cdn.discordapp.com/attachments/1093147291327668335/1093250649338167296/unknown_11.png")
+	await ctx.send(embed = emb)
+	await ctx.message.delete()
+
+client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.Gll62v.FECCJjPyqNkE6ZAi4YjrOscunQfKDWz7Fu07aA')
