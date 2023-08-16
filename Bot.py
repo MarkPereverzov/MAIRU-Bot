@@ -3,12 +3,13 @@ import discord
 import sqlite3
 import random
 from discord.ext import commands
+from config import settings
 
 intents = discord.Intents.all()
 intents.members = True
 intents.presences = True
 
-client = commands.Bot(command_prefix='!', intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
+client = commands.Bot(command_prefix = settings['PREFIX'], intents=intents, help_command=None, activity = discord.Game('!help', status = discord.Status.online))
 
 connection = sqlite3.connect('server.db')
 cursor = connection.cursor()
@@ -542,4 +543,4 @@ async def help(ctx):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 
-client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GL9Tgc.QLVH-UPlVi901JCn0c-pMg0SyHu19ItWpUoAWM')
+client.run(settings['TOKEN'])

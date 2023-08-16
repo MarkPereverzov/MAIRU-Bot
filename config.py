@@ -1,0 +1,6 @@
+settings = {
+    'TOKEN': 'MTA5MTI5MTcwMjM5ODAyNTc1OQ.GL9Tgc.QLVH-UPlVi901JCn0c-pMg0SyHu19ItWpUoAWM',
+    'NAME BOT': 'MAIRU Economy',
+    'ID': '1091291702398025759',
+    'PREFIX': '!'
+}
