@@ -20,7 +20,7 @@ async def on_ready():
 			if cursor.execute(f"SELECT id FROM member WHERE id = {member.id}").fetchone() is None:
 				cursor.execute(f"INSERT INTO member VALUES ({member.id}, 0, 0, 0, 0, 0, 0, 0, 0)")
 			else:
-				pass	
+				pass
 
 async def false_message(ctx, value):
 	emb = discord.Embed(title = '', color = 0xFF7575)
@@ -542,4 +542,4 @@ async def help(ctx):
 	await ctx.send(embed = emb)
 	await ctx.message.delete()
 
-client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.Gll62v.FECCJjPyqNkE6ZAi4YjrOscunQfKDWz7Fu07aA')
+client.run('MTA5MTI5MTcwMjM5ODAyNTc1OQ.GL9Tgc.QLVH-UPlVi901JCn0c-pMg0SyHu19ItWpUoAWM')
